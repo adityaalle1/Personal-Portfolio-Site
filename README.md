@@ -45,16 +45,4 @@ A cyberpunk-themed personal portfolio site built from scratch with vanilla HTML,
 
 ---
 
-## Run Locally
-
-```bash
-cd aditya-portfolio
-python3 -m http.server 4200
-# open http://localhost:4200
-```
-
-> Requires a local server — videos and the GLB model won't load from `file://`.
-
----
-
 *Designed & developed by Aditya Alle*
