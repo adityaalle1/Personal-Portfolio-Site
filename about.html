@@ -481,14 +481,6 @@
       -webkit-text-fill-color: transparent;
     }
 
-    /* ── ROBOTIC TYPEOUT ── */
-    .type-out { position: relative; }
-    .type-cursor {
-      display: inline-block; width: 2px; height: .95em; vertical-align: middle;
-      background: var(--acid); margin-left: 2px; flex-shrink: 0;
-      animation: blink 0.65s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
 
     /* ── BACK BREADCRUMB ── */
     .back-breadcrumb {
@@ -602,7 +594,7 @@
           <span class="s-code-dim">OUTPUT.MODULE</span>
         </div>
         <h2 class="s-title"><span class="sti glitch-hover">Edits. 3D. Motion.</span></h2>
-        <p class="s-sub type-out">Cinematic edits and 3D renders. MP4s &amp; assets uploading soon.</p>
+        <p class="s-sub">Cinematic edits and 3D renders. MP4s &amp; assets uploading soon.</p>
       </div>
       <a href="https://instagram.com/onlytwyce" target="_blank" class="btn-ghost">@ONLYTWYCE ↗</a>
     </div>
@@ -674,7 +666,7 @@
         </div>
         <h2 class="s-title"><span class="sti glitch-hover">Ranked.<br>Competing.<br>Always climbing.</span></h2>
       </div>
-      <p class="s-sub type-out" style="margin-top:8px">Gaming is a lens for how I approach everything: study the meta, iterate fast, grind to the top rank. The scoreboard doesn't lie.</p>
+      <p class="s-sub" style="margin-top:8px">Gaming is a lens for how I approach everything: study the meta, iterate fast, grind to the top rank. The scoreboard doesn't lie.</p>
     </div>
     <div class="game-grid">
 
@@ -812,7 +804,7 @@
       <span class="s-code-dim">MEDIA.MODULE</span>
     </div>
     <h2 class="s-title"><span class="sti glitch-hover">My Watch List.</span></h2>
-    <p class="s-sub type-out">74 completed series. Taste runs dark — AoT, JJK, Chainsaw Man, Vinland Saga.</p>
+    <p class="s-sub">74 completed series. Taste runs dark — AoT, JJK, Chainsaw Man, Vinland Saga.</p>
 
     <div class="anime-layout">
 
@@ -923,7 +915,7 @@
       <span class="s-code-dim">MUSIC.REPLAY</span>
     </div>
     <h2 class="s-title"><span class="sti glitch-hover">Replay 20XX.</span></h2>
-    <p class="s-sub type-out">34,535 minutes. Drake #1 four years running. The data doesn't lie.</p>
+    <p class="s-sub">34,535 minutes. Drake #1 four years running. The data doesn't lie.</p>
 
     <div class="music-layout">
 
@@ -1568,40 +1560,6 @@ gsap.from('#contact .social-chip',{scrollTrigger:stH('#contact .social-row'),opa
   });
 })();
 
-/* ════════════════════════════════
-   ROBOTIC TYPEOUT — Body text
-════════════════════════════════ */
-(function(){
-  const els=document.querySelectorAll('.type-out');
-  els.forEach(el=>{
-    el._origText=el.textContent;
-    el._typed=false;
-    el.textContent='';
-  });
-
-  const io=new IntersectionObserver(entries=>{
-    entries.forEach(en=>{
-      if(!en.isIntersecting||en.target._typed) return;
-      en.target._typed=true;
-      typeIt(en.target);
-    });
-  },{threshold:.15});
-  els.forEach(el=>io.observe(el));
-
-  function typeIt(el){
-    const txt=el._origText; let i=0;
-    const cur=document.createElement('span'); cur.className='type-cursor';
-    el.appendChild(cur);
-    function tick(){
-      if(i>=txt.length){ setTimeout(()=>cur.remove(),800); return; }
-      el.insertBefore(document.createTextNode(txt[i]),cur); i++;
-      const ch=txt[i-1];
-      const delay=ch==='.'||ch==='!'||ch==='?'?160:ch===','?90:ch===' '?55:28+Math.random()*22;
-      setTimeout(tick,delay);
-    }
-    setTimeout(tick,250);
-  }
-})();
 
 /* ════════════════════════════════
    HASH NAV — scroll to section if URL has #hash on load
