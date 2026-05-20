@@ -540,6 +540,11 @@
       .back-breadcrumb{padding:40px 22px 0}
       .creative-grid{grid-template-columns:1fr}
       .c-card.wide{aspect-ratio:16/9}
+      /* Mobile: use native scroll */
+      #content { position: static !important; transform: none !important; width: 100% !important; }
+      body { overflow-y: auto !important; height: auto !important; cursor: auto !important; }
+      #cursor, #cursor-ring { display: none !important; }
+      #webgl { opacity: 0.4; }
     }
   </style>
 </head>
@@ -1090,68 +1095,118 @@ document.addEventListener('mousemove',e=>{
    SMOOTH SCROLL
 ════════════════════════════════ */
 const content = document.getElementById('content');
-let scrollTarget=0, scrollCurrent=0;
-const EASE=0.085;
+const IS_MOBILE = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth < 768);
 
-/* Cache viewport + scrollHeight — updated only on resize */
+/* scrollTarget / scrollCurrent — module-level so all code below can read them.
+   On mobile: scrollCurrent is updated by the native 'scroll' event listener.
+   On desktop: scrollCurrent is updated each RAF frame by the smooth-scroll loop. */
+let scrollTarget = 0;
+let scrollCurrent = 0;
+
+/* Cache viewport + scrollHeight — always needed */
 let _vw=innerWidth, _vh=innerHeight, _sh=0;
-function _updateSizes(){
-  _vw=innerWidth; _vh=innerHeight;
-  _sh=content.scrollHeight;
-  document.body.style.height=_sh+'px';
-}
-_updateSizes();
-new ResizeObserver(_updateSizes).observe(content);
-window.addEventListener('resize',_updateSizes,{passive:true});
-
-window.addEventListener('wheel',e=>{
-  scrollTarget = Math.max(0, Math.min(scrollTarget+e.deltaY, _sh-_vh));
-},{passive:true});
-let tY=0;
-window.addEventListener('touchstart',e=>{tY=e.touches[0].clientY;},{passive:true});
-window.addEventListener('touchmove',e=>{
-  const d=tY-e.touches[0].clientY; tY=e.touches[0].clientY;
-  scrollTarget=Math.max(0,Math.min(scrollTarget+d, _sh-_vh));
-},{passive:true});
-
 const $nav=document.getElementById('nav');
-let _lastScrollForST=-1;
 
-/* ── MASTER RAF LOOP — consolidates: cursor trail, smooth scroll, ScrollTrigger ── */
-(function masterLoop(){
-  requestAnimationFrame(masterLoop);
+if (IS_MOBILE) {
+  /* ── MOBILE: native scroll ── */
+  content.style.position = 'static';
+  content.style.transform = 'none';
+  content.style.width = '100%';
+  document.body.style.overflow = 'auto';
+  document.body.style.height = 'auto';
 
-  /* 1. Cursor trail */
-  if(window._trailDots){
-    const now=performance.now();
-    const dots=window._trailDots, FADE=window._trailFADE;
-    for(let i=0;i<dots.length;i++){
-      const ec=dots[i];
-      const age=now-ec.born;
-      if(age>FADE){ ec.el.style.opacity=0; continue; }
-      const life=1-age/FADE;
-      const sz=3+life*3;
-      ec.el.style.width=sz+'px'; ec.el.style.height=sz+'px';
-      ec.el.style.background='rgba(194,254,11,'+(Math.round(life*.38*1000)/1000)+')';
-      ec.el.style.opacity=1;
+  /* Keep scrollCurrent in sync with native scroll for bg canvas / ship animation */
+  window.addEventListener('scroll', () => {
+    scrollCurrent = window.scrollY;
+    $nav.classList.toggle('scrolled', scrollCurrent > 60);
+  }, {passive:true});
+
+  _sh = document.body.scrollHeight;
+  window.addEventListener('resize', () => {
+    _vw = innerWidth; _vh = innerHeight;
+    _sh = document.body.scrollHeight;
+  }, {passive:true});
+
+  /* Master RAF — cursor trail only (smooth scroll not needed on mobile) */
+  (function masterLoop(){
+    requestAnimationFrame(masterLoop);
+    if(window._trailDots){
+      const now=performance.now();
+      const dots=window._trailDots, FADE=window._trailFADE;
+      for(let i=0;i<dots.length;i++){
+        const ec=dots[i];
+        const age=now-ec.born;
+        if(age>FADE){ ec.el.style.opacity=0; continue; }
+        const life=1-age/FADE;
+        const sz=3+life*3;
+        ec.el.style.width=sz+'px'; ec.el.style.height=sz+'px';
+        ec.el.style.background='rgba(194,254,11,'+(Math.round(life*.38*1000)/1000)+')';
+        ec.el.style.opacity=1;
+      }
     }
-  }
+  })();
 
-  /* 2. Smooth scroll */
-  scrollCurrent+=(scrollTarget-scrollCurrent)*EASE;
-  const s=Math.round(scrollCurrent*100)/100;
-  content.style.transform=`translateY(-${s}px)`;
-  $nav.classList.toggle('scrolled',s>60);
+} else {
+  /* ── DESKTOP: custom smooth scroll ── */
+  const EASE=0.085;
 
-  /* 3. ScrollTrigger — only update when scroll position actually changed */
-  if(ScrollTrigger && Math.abs(scrollCurrent-_lastScrollForST)>0.05){
-    _lastScrollForST=scrollCurrent;
-    ScrollTrigger.update();
+  function _updateSizes(){
+    _vw=innerWidth; _vh=innerHeight;
+    _sh=content.scrollHeight;
+    document.body.style.height=_sh+'px';
   }
-})();
+  _updateSizes();
+  new ResizeObserver(_updateSizes).observe(content);
+  window.addEventListener('resize',_updateSizes,{passive:true});
+
+  window.addEventListener('wheel',e=>{
+    scrollTarget = Math.max(0, Math.min(scrollTarget+e.deltaY, _sh-_vh));
+  },{passive:true});
+  let tY=0;
+  window.addEventListener('touchstart',e=>{tY=e.touches[0].clientY;},{passive:true});
+  window.addEventListener('touchmove',e=>{
+    const d=tY-e.touches[0].clientY; tY=e.touches[0].clientY;
+    scrollTarget=Math.max(0,Math.min(scrollTarget+d, _sh-_vh));
+  },{passive:true});
+
+  let _lastScrollForST=-1;
+
+  /* ── MASTER RAF LOOP — consolidates: cursor trail, smooth scroll, ScrollTrigger ── */
+  (function masterLoop(){
+    requestAnimationFrame(masterLoop);
+
+    /* 1. Cursor trail */
+    if(window._trailDots){
+      const now=performance.now();
+      const dots=window._trailDots, FADE=window._trailFADE;
+      for(let i=0;i<dots.length;i++){
+        const ec=dots[i];
+        const age=now-ec.born;
+        if(age>FADE){ ec.el.style.opacity=0; continue; }
+        const life=1-age/FADE;
+        const sz=3+life*3;
+        ec.el.style.width=sz+'px'; ec.el.style.height=sz+'px';
+        ec.el.style.background='rgba(194,254,11,'+(Math.round(life*.38*1000)/1000)+')';
+        ec.el.style.opacity=1;
+      }
+    }
+
+    /* 2. Smooth scroll */
+    scrollCurrent+=(scrollTarget-scrollCurrent)*EASE;
+    const s=Math.round(scrollCurrent*100)/100;
+    content.style.transform=`translateY(-${s}px)`;
+    $nav.classList.toggle('scrolled',s>60);
+
+    /* 3. ScrollTrigger — only update when scroll position actually changed */
+    if(ScrollTrigger && Math.abs(scrollCurrent-_lastScrollForST)>0.05){
+      _lastScrollForST=scrollCurrent;
+      ScrollTrigger.update();
+    }
+  })();
+}
 
 /* ════════════════════════════════
-   ANCHOR NAV — intercept all href="#id" links and feed into custom scroller
+   ANCHOR NAV — intercept all href="#id" links
 ════════════════════════════════ */
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
@@ -1161,8 +1216,12 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     if (!el) return;
     e.preventDefault();
     const navH = $nav.offsetHeight || 80;
-    const rect = el.getBoundingClientRect();
-    scrollTarget = Math.max(0, Math.min(scrollCurrent + rect.top - navH, _sh - _vh));
+    if (IS_MOBILE) {
+      window.scrollTo({top: el.offsetTop - navH, behavior: 'smooth'});
+    } else {
+      /* scrollTarget is module-level; clamp to valid range */
+      scrollTarget = Math.max(0, Math.min(el.offsetTop - navH, _sh - _vh));
+    }
   });
 });
 
@@ -1503,13 +1562,16 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
    GSAP SCROLL ANIMATIONS
 ════════════════════════════════ */
 gsap.registerPlugin(ScrollTrigger);
-ScrollTrigger.scrollerProxy(content,{
-  scrollTop(v){ if(arguments.length) scrollTarget=v; return scrollCurrent; },
-  getBoundingClientRect(){ return {top:0,left:0,width:_vw,height:_vh}; },
-  pinType:'transform'
-});
-ScrollTrigger.defaults({scroller:content});
-/* ScrollTrigger.update() is now throttled inside masterLoop — no separate RAF needed */
+if (!IS_MOBILE) {
+  ScrollTrigger.scrollerProxy(content,{
+    scrollTop(v){ if(arguments.length){ scrollTarget=Math.max(0,Math.min(v,_sh-_vh)); } return scrollCurrent; },
+    getBoundingClientRect(){ return {top:0,left:0,width:_vw,height:_vh}; },
+    pinType:'transform'
+  });
+  ScrollTrigger.defaults({scroller:content});
+}
+/* On mobile, GSAP uses window scroll by default — no proxy needed */
+/* ScrollTrigger.update() is throttled inside masterLoop on desktop */
 
 /* ONE-SHOT helpers */
 function stH(t,x){ return {trigger:t,start:'top 88%',toggleActions:'play none none none',...(x||{})}; }
@@ -1573,8 +1635,11 @@ gsap.from('#contact .social-chip',{scrollTrigger:stH('#contact .social-row'),opa
   /* Slight delay to let layout stabilize */
   setTimeout(()=>{
     const navH = $nav.offsetHeight || 80;
-    const rect = el.getBoundingClientRect();
-    scrollTarget = Math.max(0, Math.min(rect.top - navH + scrollCurrent, _sh - _vh));
+    if (IS_MOBILE) {
+      window.scrollTo({top: el.offsetTop - navH, behavior: 'smooth'});
+    } else {
+      scrollTarget = Math.max(0, Math.min(el.offsetTop - navH, _sh - _vh));
+    }
   }, 300);
 })();
 </script>
